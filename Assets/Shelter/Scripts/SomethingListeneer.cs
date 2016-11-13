@@ -5,11 +5,23 @@ using Leap.Unity;
 using Leap;
 using System.Collections.Generic;
 using UnityEngine.UI;
+using UnityEngine.Networking;
 
 public struct Coord {
     public double x;
     public double y;
     public double z;
+}
+
+public class MyMessageType {
+    public static short Shape = MsgType.Highest + 1;
+}
+
+public class ShapeMessage : MessageBase {
+    public string shapeType;
+    public Vector3 position;
+    public Vector3 dimensions;
+    public Quaternion rotation;
 }
 
 public class SomethingListeneer : MonoBehaviour {
@@ -37,6 +49,8 @@ public class SomethingListeneer : MonoBehaviour {
         positionText = GameObject.FindWithTag("PositionText").GetComponent<Text>();
         dimensionsText = GameObject.FindWithTag("DimensionsText").GetComponent<Text>();
         colorText = GameObject.FindWithTag("ColorText").GetComponent<Text>();
+
+        NetworkServer.Listen(4444);
 	}
 
     // Update is called once per frame
@@ -160,10 +174,16 @@ public class SomethingListeneer : MonoBehaviour {
                                 positionText.text = String.Format("Position: ({0,5:00.00}, {1,5:00.00}, {2,5:00.00})", position.x, position.y, position.z);
                             } else {
                                 if (hand.PalmVelocity.x > 1) {
-                                    curBlock = null;
                                     selectedText.text = "Object Selected: False";
                                     positionText.text = "Position: N/A";
                                     dimensionsText.text = "Dimensions: N/A";
+                                    ShapeMessage msg = new ShapeMessage();
+                                    msg.shapeType = "block";
+                                    msg.position = curBlock.transform.position;
+                                    msg.rotation = curBlock.transform.rotation;
+                                    msg.dimensions = curBlock.transform.localScale;
+                                    NetworkServer.SendToAll(MyMessageType.Shape, msg);
+                                    curBlock = null;
                                 } else if (hand.PalmVelocity.x < -1) {
                                     Destroy(curBlock.gameObject);
                                     curBlock = null;
